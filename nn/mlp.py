@@ -4,7 +4,7 @@ from nn.activation import relu, relu_backward
 class NeuralNetwork:
     def __init__(
         self,
-        n_features: int = 8, # l_free, r_free, up_free, down_free, [rule]
+        n_features: int = 9, # l_free, r_free, up_free, down_free, [rule]
         hidden_size: int = 16,
         n_actions: int = 4,      # left, right, up, down
         learning_rate: float = 0.01,
@@ -27,6 +27,10 @@ class NeuralNetwork:
         Returns:
             Q: (N, n_actions) – Q(s,a) for each action
         """
+        if X.shape[1] != self.n_features:
+            raise ValueError(
+                f"Expected input with {self.n_features} features, got {X.shape[1]}"
+            )
         z1 = X @ self.W1 + self.b1      # (N, H)
         a1 = relu(z1)                   # (N, H)
         z2 = a1 @ self.W2 + self.b2     # (N, A) -> Q-values

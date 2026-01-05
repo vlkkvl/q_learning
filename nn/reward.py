@@ -4,15 +4,15 @@ from simulation.signs import SignType
 # Give penalties for bad decisions and rewards for good ones.
 # E.g. going into the dead end results in reward -= 1
 def assign_reward(moved, goal_reached, sign):
-    reward = -0.2 # step cost
+    reward = -0.05 # step cost
     done = False
 
     if goal_reached:
-        reward += 100.0
+        reward += 30.0
         done = True
 
     if not moved:
-        reward -= 1.0  # wall
+        reward -= 1.5  # wall
 
     if isinstance(sign, np.ndarray):
         sign = sign.tolist()
@@ -22,7 +22,7 @@ def assign_reward(moved, goal_reached, sign):
 
     # warning signs
     if sign_type == SignType.DEAD_END:
-        reward -= 5.0
+        reward -= 2.0
         print("DEAD END penalty applied.")
     elif sign_type in {
         SignType.AVOID_LEFT,
@@ -30,7 +30,7 @@ def assign_reward(moved, goal_reached, sign):
         SignType.AVOID_UP,
         SignType.AVOID_DOWN,
     }:
-        reward -= 2.0
+        reward -= 1.5
         print("AVOID penalty applied.")
 
     return reward, done

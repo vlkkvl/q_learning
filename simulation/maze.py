@@ -12,6 +12,7 @@ class Maze:
         self.goal = items.Goal()
         self.score = items.Score(self)
         self.cor_start = None
+        self.cor_goal = None
         self.signs = {}  # (x, y) -> one-hot rule
         self.sign_turtles = {
             "E": items.Sign(SignType.DEAD_END),
@@ -36,6 +37,7 @@ class Maze:
                     self.wall.stamp()
                 if character == "G":
                     self.goal.goto(screen_x, screen_y)
+                    self.cor_goal = (x, y)
                 if character == "P":
                     self.cor_start = (screen_x, screen_y)
                 if character in self.sign_turtles:

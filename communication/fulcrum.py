@@ -23,9 +23,23 @@ class Fulcrum(ABC):
     def get_state(self) -> np.ndarray:
         """
         Returns current observable state of the agent as np.ndarray.
-        e.g. [0, 1, 0, 1, 0, 0, 0, 1], where
+        e.g. [0, 1, 0, 1, 0, 0, 0, 0, 1], where
             [:4] - available actions, where 1 - action free, 0 - action impossible (wall)
             [4:] - one-hot of observed sign
+        """
+        pass
+
+    @abstractmethod
+    def get_coordinates(self) -> Tuple[int, int]:
+        """
+        Returns current player maze coordinates.
+        """
+        pass
+
+    @abstractmethod
+    def get_goal_coordinates(self) -> Tuple[int, int] | None:
+        """
+        Returns goal maze coordinates.
         """
         pass
 

@@ -1,6 +1,7 @@
 import numpy as np
 from communication.fulcrum import Fulcrum
 from nn.reward import assign_reward
+from simulation.signs import SignType
 
 
 class QLearning:
@@ -13,6 +14,13 @@ class QLearning:
         self.epsilon_min = epsilon_min
         self.epsilon_decay = epsilon_decay
         self.episode_losses = []
+
+    def valid_actions(self, state: np.ndarray) -> np.ndarray:
+        available = state[:self.nn.n_actions]
+        valid = np.where(available > 0.5)[0]
+        if valid.size == 0:
+            return np.arange(self.nn.n_actions)
+        return valid
 
     def select_action(self, state, epsilon):
         """
@@ -27,13 +35,18 @@ class QLearning:
         Returns:
             int: Index of the selected action in [0, n_actions-1].
         """
+        valid_actions = self.valid_actions(state)
         # exploration
         if np.random.rand() < epsilon:
-            return np.random.randint(self.nn.n_actions)
+            return int(np.random.choice(valid_actions))
 
         # exploitation
         Q, _ = self.nn.forward(state[None, :])    # (1, A)
-        return int(np.argmax(Q[0]))
+        q_values = Q[0].copy()
+        invalid_mask = np.ones(self.nn.n_actions, dtype=bool)
+        invalid_mask[valid_actions] = False
+        q_values[invalid_mask] = -np.inf
+        return int(np.argmax(q_values))
 
     def td_step(self, states, actions, targets):
         """
@@ -78,14 +91,31 @@ class QLearning:
         for ep in range(num_episodes):
             total_loss = 0.0
             steps = 0
+            visited_positions = set()
+            visit_counts = {}
+            previous_position = None
+            previous_distance = None
 
             # reset environment
             self.env.reset()
+            current_position = self.env.get_coordinates()
+            visited_positions.add(current_position)
+            visit_counts[current_position] = 1
+            goal_position = self.env.get_goal_coordinates()
+            if goal_position is not None:
+                dx = abs(current_position[0] - goal_position[0])
+                dy = abs(current_position[1] - goal_position[1])
+                previous_distance = dx + dy
 
             print(f"Episode {ep+1}/{num_episodes}")
 
             for t in range(max_steps):
                 state = self.env.get_state()
+                if state.shape[0] != self.nn.n_features:
+                    raise ValueError(
+                        f"State size {state.shape[0]} does not match network input size "
+                        f"{self.nn.n_features}."
+                    )
 
                 # choose action (epsilon-greedy)
                 action = self.select_action(state, epsilon=self.epsilon)
@@ -99,9 +129,38 @@ class QLearning:
                 # calculate reward in the next state
                 reward, done = assign_reward(moved, goal_reached, sign)
 
+                if moved:
+                    position = self.env.get_coordinates()
+                    if position not in visited_positions:
+                        reward += 0.1 # progress bonus
+                        visited_positions.add(position)
+                    else:
+                        reward -= 0.1 # revisit penalty
+                    visit_counts[position] = visit_counts.get(position, 0) + 1
+                    if (
+                            previous_position is not None
+                            and position == previous_position
+                            and SignType.from_vector(sign) != SignType.DEAD_END
+                    ):
+                        reward -= 0.5 # backtrack penalty
+                    if goal_position is not None:
+                        dx = abs(position[0] - goal_position[0])
+                        dy = abs(position[1] - goal_position[1])
+                        distance = dx + dy
+                        if previous_distance is not None and distance < previous_distance:
+                            reward += 0.05 # distance_bonus
+                        previous_distance = distance
+                    previous_position = current_position
+                    current_position = position
+
                 # Temporal Difference target
                 Q_next, _ = self.nn.forward(next_state[None, :])  # value estimate of 1 step ahead
-                target = reward if done else reward + self.gamma * np.max(Q_next[0])
+                next_q_values = Q_next[0].copy()
+                next_valid_actions = self.valid_actions(next_state)
+                next_invalid_mask = np.ones(self.nn.n_actions, dtype=bool)
+                next_invalid_mask[next_valid_actions] = False
+                next_q_values[next_invalid_mask] = -np.inf
+                target = reward if done else reward + self.gamma * np.max(next_q_values)
 
                 if done:
                     print("Goal reached.")
