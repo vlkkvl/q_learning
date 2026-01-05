@@ -122,36 +122,25 @@ class QLearning:
 
                 # perform action in maze
                 next_state, moved, goal_reached = self.env.execute_action(action)
+                next_position = self.env.get_coordinates()
 
                 # read sign
                 sign = next_state[4:]
 
                 # calculate reward in the next state
-                reward, done = assign_reward(moved, goal_reached, sign)
-
+                reward, done, previous_distance = assign_reward(
+                    moved,
+                    goal_reached,
+                    sign,
+                    next_position,
+                    previous_position,
+                    visited_positions,
+                    goal_position,
+                    previous_distance
+                )
                 if moved:
-                    position = self.env.get_coordinates()
-                    if position not in visited_positions:
-                        reward += 0.1 # progress bonus
-                        visited_positions.add(position)
-                    else:
-                        reward -= 0.1 # revisit penalty
-                    visit_counts[position] = visit_counts.get(position, 0) + 1
-                    if (
-                            previous_position is not None
-                            and position == previous_position
-                            and SignType.from_vector(sign) != SignType.DEAD_END
-                    ):
-                        reward -= 0.5 # backtrack penalty
-                    if goal_position is not None:
-                        dx = abs(position[0] - goal_position[0])
-                        dy = abs(position[1] - goal_position[1])
-                        distance = dx + dy
-                        if previous_distance is not None and distance < previous_distance:
-                            reward += 0.05 # distance_bonus
-                        previous_distance = distance
                     previous_position = current_position
-                    current_position = position
+                    current_position = next_position
 
                 # Temporal Difference target
                 Q_next, _ = self.nn.forward(next_state[None, :])  # value estimate of 1 step ahead
