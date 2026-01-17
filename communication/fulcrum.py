@@ -13,7 +13,7 @@ class Fulcrum(ABC):
         The actions are 0 - left, 1 - right, 2 - up, 3 - down
 
         :return: (next_state, done, info)
-        - next_state: observable state (left_free, right_free, front_free, rule)
+        - next_state: observable state (left_free, right_free, up_free, down_free, sign)
         - moved: was agent able to move (no wall)?
         - done: goal reached?
         """

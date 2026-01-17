@@ -27,6 +27,8 @@ class Player(turtle.Turtle, Fulcrum):
         self.penup()
         self.speed(0)
         self.maze = maze
+        self.maze_width = len(self.maze.active_level[0])  # number of columns
+        self.maze_height = len(self.maze.active_level)  # number of rows
         if maze is not None: self.move_to_start()
 
     def get_coordinates(self):
@@ -36,6 +38,12 @@ class Player(turtle.Turtle, Fulcrum):
         x_screen, y_screen = self.position()
         x, y = util_math.screen_to_list(x_screen, y_screen)
         return x, y
+
+    def get_goal_coordinates(self):
+        """
+        :returns goal **maze** coordinates
+        """
+        return self.maze.cor_goal
 
     def move(self, direction):
         """
@@ -66,11 +74,6 @@ class Player(turtle.Turtle, Fulcrum):
             moved = True
         return moved, goal_reached
 
-    def get_goal_coordinates(self):
-        """
-        :returns goal **maze** coordinates
-        """
-        return self.maze.cor_goal
 
     def move_to_start(self):
         """
@@ -80,26 +83,44 @@ class Player(turtle.Turtle, Fulcrum):
             x_start, y_start = self.maze.cor_start
             self.goto(x_start, y_start)
 
-
     def get_state(self):
         """
         Returns current observable state of the agent as np.ndarray.
-        e.g. [0, 1, 0, 1, 0, 0, 0, 1], where
-        [:4] - available actions, where 1 - action free, 0 - action impossible (wall)
-        [4:] - one-hot of observed sign
+
+        STATE REPRESENTATION (16 features):
+        [0:4]  - available actions (left_free, right_free, up_free, down_free)
+        [4:12]  - one-hot sign encoding
+        [12]    - normalized x position (0 to 1)
+        [13]   - normalized y position (0 to 1)
+        [14]   - normalized dx to goal (signed, -1 to 1)
+        [15]   - normalized dy to goal (signed, -1 to 1)
         """
         x, y = self.get_coordinates()
+        goal_x, goal_y = self.maze.cor_goal
 
+        # Wall detection
         up_free = 0 if self.maze.check_for_border(x, y - 1) else 1
         left_free = 0 if self.maze.check_for_border(x - 1, y) else 1
         right_free = 0 if self.maze.check_for_border(x + 1, y) else 1
         down_free = 0 if self.maze.check_for_border(x, y + 1) else 1
 
+        # Sign at current position
         sign_vec = self.maze.get_rule_at(x, y)
 
-        features = [left_free, right_free, up_free, down_free] + sign_vec
-        return np.array(features, dtype=float)
+        # Position features (normalized to [0, 1])
+        norm_x = x / self.maze_width
+        norm_y = y / self.maze_height
 
+        # Goal-relative features (normalized to [-1, 1])
+        dx_to_goal = (goal_x - x) / self.maze_width
+        dy_to_goal = (goal_y - y) / self.maze_height
+
+        features = (
+                [left_free, right_free, up_free, down_free] +
+                sign_vec +
+                [norm_x, norm_y, dx_to_goal, dy_to_goal]
+        )
+        return np.array(features, dtype=float)
 
     def execute_action(self, action):
         """
@@ -107,7 +128,7 @@ class Player(turtle.Turtle, Fulcrum):
         The actions are 0 - left, 1 - right, 2 - up, 3 - down
 
         :return: (next_state, done, info)
-        - next_state: observable state (left_free, right_free, up_free, down_free, rule)
+        - next_state: observable state (left_free, right_free, up_free, down_free, sign)
         - moved: was agent able to move (no wall)?
         - done: goal reached?
         """

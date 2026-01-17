@@ -15,11 +15,14 @@ class Maze:
         self.cor_goal = None
         self.signs = {}  # (x, y) -> one-hot rule
         self.sign_turtles = {
-            "E": items.Sign(SignType.DEAD_END),
-            "L": items.Sign(SignType.AVOID_LEFT, color="orange", heading=180),
-            "R": items.Sign(SignType.AVOID_RIGHT, color="orange", heading=0),
-            "U": items.Sign(SignType.AVOID_UP, color="orange", heading=90),
-            "D": items.Sign(SignType.AVOID_DOWN, color="orange", heading=270),
+            "Q": items.Sign(SignType.DEAD_END_LEFT, color="yellow", heading=180),
+            "W": items.Sign(SignType.DEAD_END_RIGHT, color="yellow", heading=0),
+            "S": items.Sign(SignType.DEAD_END_UP, color="yellow", heading=90),
+            "A": items.Sign(SignType.DEAD_END_DOWN, color="yellow", heading=270),
+            "L": items.Sign(SignType.PREFER_LEFT, color="orange", heading=180),
+            "R": items.Sign(SignType.PREFER_RIGHT, color="orange", heading=0),
+            "U": items.Sign(SignType.PREFER_UP, color="orange", heading=90),
+            "D": items.Sign(SignType.PREFER_DOWN, color="orange", heading=270),
         }
 
     def setup_maze(self):

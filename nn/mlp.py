@@ -4,10 +4,10 @@ from nn.activation import relu, relu_backward
 class NeuralNetwork:
     def __init__(
         self,
-        n_features: int = 9, # l_free, r_free, up_free, down_free, [rule]
-        hidden_size: int = 16,
+        n_features: int = 16, # l_free, r_free, up_free, down_free, [rule], x_norm, y_norm, goal_x_norm, goal_y_norm
+        hidden_size: int = 32,
         n_actions: int = 4,      # left, right, up, down
-        learning_rate: float = 0.01,
+        learning_rate: float = 0.001,
         weight_scale: float = 1.0
     ):
         self.n_features = n_features
@@ -27,10 +27,6 @@ class NeuralNetwork:
         Returns:
             Q: (N, n_actions) – Q(s,a) for each action
         """
-        if X.shape[1] != self.n_features:
-            raise ValueError(
-                f"Expected input with {self.n_features} features, got {X.shape[1]}"
-            )
         z1 = X @ self.W1 + self.b1      # (N, H)
         a1 = relu(z1)                   # (N, H)
         z2 = a1 @ self.W2 + self.b2     # (N, A) -> Q-values
@@ -64,3 +60,20 @@ class NeuralNetwork:
         self.b1 -= self.lr * grads["b1"]
         self.W2 -= self.lr * grads["W2"]
         self.b2 -= self.lr * grads["b2"]
+
+    def copy_from(self, other: "NeuralNetwork"):
+        """Hard copy: self <- other"""
+        self.W1 = other.W1.copy()
+        self.b1 = other.b1.copy()
+        self.W2 = other.W2.copy()
+        self.b2 = other.b2.copy()
+
+    def soft_update_from(self, other: "NeuralNetwork", tau: float):
+        """
+        Soft update: self <- tau*other + (1-tau)*self.
+        self is target, other is local.
+        """
+        self.W1 = tau * other.W1 + (1.0 - tau) * self.W1
+        self.b1 = tau * other.b1 + (1.0 - tau) * self.b1
+        self.W2 = tau * other.W2 + (1.0 - tau) * self.W2
+        self.b2 = tau * other.b2 + (1.0 - tau) * self.b2

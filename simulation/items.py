@@ -32,7 +32,6 @@ class Goal(turtle.Turtle):
         self.penup()
         self.speed(0)
 
-# Add new signs here
 class Sign(turtle.Turtle):
     def __init__(self, sign_type: SignType, color="yellow", shape="triangle", heading=0):
         super().__init__()
